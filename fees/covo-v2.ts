@@ -1,18 +1,13 @@
 import { Adapter } from "../adapters/types";
-import { POLYGON, AVAX } from "../helpers/chains";
+import { CHAIN } from "../helpers/chains";
 import { request, gql } from "graphql-request";
 import type { ChainEndpoints } from "../adapters/types"
 import { Chain } from '@defillama/sdk/build/general';
 import { getTimestampAtStartOfDayUTC } from "../utils/date";
 
 const endpoints = {
-  [POLYGON]: "https://api.thegraph.com/subgraphs/name/defi-techz/covo-v2",
+  [CHAIN.POLYGON]: "https://api.thegraph.com/subgraphs/name/defi-techz/covo-v2-2",
 }
-
-let dailyFee= 0;
-let finalDailyFee = 0;
-let userFee = 0;
-let finalUserFee = 0;
 
 
 const methodology = {
@@ -28,12 +23,12 @@ const graphs = (graphUrls: ChainEndpoints) => {
   return (chain: Chain) => {
     return async (timestamp: number) => {
       const todaysTimestamp = getTimestampAtStartOfDayUTC(timestamp)
-      const searchTimestamp = todaysTimestamp 
+      const searchTimestamp = todaysTimestamp
 
       const graphQuery = gql
       `{
         feeStat(id: "${searchTimestamp}") {
-         margin
+          margin
         }
       }`;
 
@@ -43,27 +38,15 @@ const graphs = (graphUrls: ChainEndpoints) => {
           liquidatedCollateral
         }
       }`;
-    
-      const graphRes = await request(graphUrls[chain], graphQuery);
 
+      const graphRes = await request(graphUrls[chain], graphQuery);
       const graphRes1 = await request(graphUrls[chain], graphQuery1);
 
-        if (graphRes.feeStat != null || graphRes1.tradingStat != null) {
-      if (graphRes1.tradingStat==null)
-          {
-           graphRes1.tradingStat.liquidatedCollateral=0; }
+      const dailyFee = (Number(graphRes?.feeStat?.margin || 0)) + Number(graphRes1?.tradingStat?.liquidatedCollateral || 0);
+      const finalDailyFee = (dailyFee / 1e6);
+      const userFee = (Number(graphRes?.feeStat?.margin || 0)) + Number(graphRes1?.tradingStat?.liquidatedCollateral  || 0)
+      const finalUserFee = (userFee / 1e6);
 
-
-      if (graphRes.feeStat==null)
-         {
-          graphRes.feeStat.margin=0;}
-
-       dailyFee = parseInt(graphRes.feeStat.margin) + parseInt(graphRes1.tradingStat.liquidatedCollateral);
-       finalDailyFee = (dailyFee / 1000000);
-       userFee = parseInt(graphRes.feeStat.margin) + parseInt(graphRes1.tradingStat.liquidatedCollateral)
-       finalUserFee = (userFee / 1000000);
-
-      }
 
       return {
         timestamp,
@@ -72,7 +55,7 @@ const graphs = (graphUrls: ChainEndpoints) => {
         dailyRevenue: (finalDailyFee * 0.4).toString(),
         dailyProtocolRevenue: (finalDailyFee * 0.1).toString(),
      //  totalProtocolRevenue: "0",
-       totalProtocolRevenue: (finalDailyFee * 0.1).toString(),
+      //  totalProtocolRevenue: (finalDailyFee * 0.1).toString(),
         dailyHoldersRevenue: (finalDailyFee * 0.4).toString(),
         dailySupplySideRevenue: (finalDailyFee * 0.5).toString(),
       };
@@ -83,8 +66,8 @@ const graphs = (graphUrls: ChainEndpoints) => {
 
 const adapter: Adapter = {
   adapter: {
-    [POLYGON]: {
-      fetch: graphs(endpoints)(POLYGON),
+    [CHAIN.POLYGON]: {
+      fetch: graphs(endpoints)(CHAIN.POLYGON),
       start: async () => 1680070802,
       meta: {
         methodology
