@@ -14,6 +14,7 @@ const graphs = getGraphDimensions({
   graphRequestHeaders: {
     [CHAIN.PULSECHAIN]: {
       "origin": "https://phux.io",
+      "referer": "https://phux.io/"
     },
   },
   totalVolume: {
